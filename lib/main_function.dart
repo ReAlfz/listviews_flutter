@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:listviews/list_view.dart';
 
 class Main_Function extends StatefulWidget {
+  const Main_Function({Key? key}) : super(key: key);
+
   _MainFunction createState() => _MainFunction();
 }
 

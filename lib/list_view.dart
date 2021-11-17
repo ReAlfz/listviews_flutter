@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:listviews/detail_page.dart';
 import 'model.dart';
 import 'package:http/http.dart' as http;
 
@@ -8,33 +10,24 @@ class List_Views extends StatefulWidget{
 }
 
 class _ListViews extends State<List_Views> {
-  late final List<User> _list = [];
-  String filter = '';
+  late Future <List<User>> _listData;
 
   Future<List<User>> getDatas() async {
-    List<User> nList = [];
     const dataUrl = 'https://api.github.com/orgs/raywenderlich/members';
     final response = await http.get(Uri.parse(dataUrl));
 
     if (response.statusCode == 200) {
       final jsonData = json.decode(response.body);
-      setState(() {
-        nList = jsonData.map<User>((json) => User.fromJson(json)).toList();
-      });
+      return jsonData.map<User>((json) => User.fromJson(json)).toList();
 
     } else {
       throw Exception('failed get json');
     }
-
-    return nList;
   }
 
   void initState() {
-    getDatas().then((value) => {
-      _list.addAll(value)
-    });
+    _listData = getDatas();
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +37,7 @@ class _ListViews extends State<List_Views> {
           Padding(
             padding: const EdgeInsets.fromLTRB(10, 15, 10, 15),
             child: TextField(
-              onChanged: (values) {},
+              onChanged: (values) => {},
               decoration: InputDecoration(
                 labelText: 'Search',
                 hintText: 'search',
@@ -65,32 +58,57 @@ class _ListViews extends State<List_Views> {
           ),
 
           Expanded(
-            child: ListView.builder(
-                itemCount: _list.length,
-                itemBuilder: (context, position) {
-                  return Container(
-                    height: 100,
-                    child: Card(
-                      child: Row(
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.all(5),
-                            child: CircleAvatar(
-                              radius: 35,
-                              backgroundColor: Colors.blue,
-                              backgroundImage: NetworkImage(_list[position].image),
+            child: FutureBuilder <List<User>> (
+              future: _listData,
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  List<User>? list = snapshot.data;
+                  return ListView.builder(
+                    itemCount: list!.length,
+                    itemBuilder: (context, position){
+                      return GestureDetector(
+                        onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => DetailPages(user: list[position])
+                                )),
+                        child: Container(
+                          height: 100,
+                          child: Card(
+                            child: Row(
+                              children: [
+                                Padding(
+                                  padding: EdgeInsets.all(5),
+                                  child: CircleAvatar(
+                                    radius: 35,
+                                    backgroundColor: Colors.blue,
+                                    backgroundImage: NetworkImage(list[position].image),
+                                  ),
+                                ),
+
+                                Padding(
+                                  padding: EdgeInsets.all(10),
+                                  child: Text(list[position].name, style: TextStyle(fontSize: 20),),
+                                )
+                              ],
                             ),
                           ),
-
-                          Padding(
-                            padding: EdgeInsets.all(10),
-                            child: Text(_list[position].name, style: TextStyle(fontSize: 20),),
-                          )
-                        ],
-                      ),
-                    ),
-                  );
+                        )
+                      );
+                   });
+                } else if (snapshot.hasError) {
+                  return Text('${snapshot.error}');
                 }
+
+                return const Center(
+                  child: Text('loading...'),
+                );
+
+                //if you want loading indicator...
+                // return const Center(
+                //   child: CircularProgressIndicator(),
+                // );
+              }
             ),
           ),
         ],
